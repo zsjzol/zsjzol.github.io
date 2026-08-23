@@ -664,7 +664,7 @@ body {
   var svgScale = 1, svgBaseW = 0, svgBaseH = 0;
   var panX = 0, panY = 0, viewMinY = 0;
   var isDragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
-  var touchStartDist = 0, touchStartScale = 1, touchMidX = 0, touchMidY = 0, touchGx = 0, touchGy = 0;
+  var touchStartDist = 0, touchStartScale = 1, touchMidX = 0, touchMidY = 0, touchGx = 0, touchGy = 0, touchStartPanX = 0, touchStartPanY = 0;
   var treeViewport = null;
   var currentNodes = [], tlMarks = [];
 
@@ -1258,6 +1258,8 @@ body {
       touchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
       touchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       touchStartScale = svgScale;
+      touchStartPanX = panX;
+      touchStartPanY = panY;
       touchGx = touchMidX - treeContainer.getBoundingClientRect().left;
       touchGy = touchMidY - treeContainer.getBoundingClientRect().top;
     }
@@ -1275,11 +1277,16 @@ body {
       var dist = Math.sqrt(dx * dx + dy * dy);
       if (touchStartDist > 0 && dist > 0) {
         var newScale = Math.min(Math.max(touchStartScale * (dist / touchStartDist), 0.15), 3.0);
-        var mx = touchMidX - treeContainer.getBoundingClientRect().left;
-        var my = touchMidY - treeContainer.getBoundingClientRect().top;
+        // 以“当前两指中点”为缩放锚点：中点移动即平移，缩放围绕中点进行，
+        // 避免旧实现把锚点固定在手势开始位置导致画面跳偏。
+        var tRect = treeContainer.getBoundingClientRect();
+        var mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - tRect.left;
+        var my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - tRect.top;
+        var anchorX = (touchGx - touchStartPanX) / touchStartScale;
+        var anchorY = (touchGy - touchStartPanY) / touchStartScale;
         svgScale = newScale;
-        panX = mx - (mx - touchGx) * (svgScale / touchStartScale);
-        panY = my - (my - touchGy) * (svgScale / touchStartScale);
+        panX = mx - anchorX * svgScale;
+        panY = my - anchorY * svgScale;
         applyView();
       }
     }

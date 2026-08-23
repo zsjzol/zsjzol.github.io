@@ -1,0 +1,67 @@
+动态dns：
+ddd
+ddd.lllrz.com
+509894
+27837439a51d42508dd84aeb4b31243f
+
+d
+ddd.sidz.top
+LTAI5tLuRuKKoaTyj5oSzvJp
+Syr1InBmGeIwtma1nO6vWYPdqYDuXA
+
+p
+ha
+
+全能推送：
+飞书
+4779484c-e0e0-45c7-b60a-79eae41c69a9
+openwrt
+60
+URL
+ipv4.ddnspod.com
+定时推送9/12/15
+状态推送：运行/wan
+
+openclash
+http://47.107.66.153:65533/api/v1/client/subscribe?token=d21e117b25925d2a79453e5bd6f729d8
+
+cwa--NPM--Custom Nginx Configuration
+location / { 
+proxy_pass http://20.20.1.137:8083; # 将所有在此路径收到的请求转发到内部服务器 ，端口 22300，这里IP是需要代理的IP，也就是Joplin的IP。 
+proxy_http_version 1.1; # 使用 HTTP 1.1 协议向后端服务器发起请求。 
+proxy_set_header Upgrade $http_upgrade; # 将客户端的 Upgrade 头信息传递给后端服务器，通常用于 WebSocket 连接升级。 
+proxy_set_header Connection $http_connection; # 将客户端的 Connection 头信息传递给后端服务器，通常与 WebSocket 配合使用。 
+proxy_set_header Host $http_host; # 将客户端请求的 Host 头信息传递给后端服务器。 
+proxy_set_header X-Real-IP $remote_addr; # 将客户端的真实 IP 地址传递给后端服务器。 
+proxy_set_header X-Forwarded-For $remote_addr; # 在 X-Forwarded-For 头信息中插入客户端的 IP 地址，以便后端服务器知道请求来自哪里。 
+proxy_set_header X-Forwarded-Host $http_host; # 将客户端请求的主机名传递给后端服务器。 
+proxy_set_header X-Forwarded-Port $server_port; # 将客户端请求的端口号传递给后端服务器。 
+proxy_set_header X-Forwarded-Proto $scheme; # 将客户端请求使用的协议（http 或 https）传递给后端服务器。 
+proxy_set_header X-Forwarded-Scheme $scheme; # 同上，将客户端请求使用的协议传递给后端服务器。 
+
+
+}
+
+尝试：
+location / {
+    proxy_pass http://20.20.1.137:8083;
+    
+    # 关键：正确设置 Host 头
+    proxy_set_header Host $host;
+    
+    # 其他必要头部
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Port $server_port; # 使用 NPM 接收的端口
+    
+    # Websocket 支持
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    
+    # 超时设置
+    proxy_connect_timeout 300s;
+    proxy_send_timeout 300s;
+    proxy_read_timeout 300s;
+}

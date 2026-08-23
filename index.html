@@ -886,7 +886,10 @@ body {
       }
       return;
     }
-    node._x = xOff + 0.5;
+    // 单亲：只要有子女（单子女或多子女），将本人水平居中于整棵子树正上方（连线规则：
+    // 中心点向上竖线直连单亲，中心点向下按现有规则——单子女直接竖线、多子女竖线+横线+每子竖线）。
+    // 单传链（如 张庭凯→张晨燕→张黎民）中每代都是单亲单子女，若不居中会逐层向左偏置。
+    node._x = (node._children.length > 0) ? xOff + node._sw / 2 : xOff + 0.5;
     node._y = yOff;
     node._placed = true;
     var childX2 = xOff;

@@ -1,0 +1,1851 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>张氏族谱</title>
+<style>
+:root {
+  --primary: #3B6B8C;
+  --primary-light: #5A8AB0;
+  --accent: #8AA2B8;
+  --bg: #EAF0F5;
+  --bg-panel: #F5F9FE;
+  --card: #FFFFFF;
+  --text: #1E2A36;
+  --text-sub: #6D8498;
+  --text-faint: #A0B5C8;
+  --line: #BCC9D4;
+  --line-soft: #DCE5ED;
+  --marriage: #B5A0C4;
+  --female: #D08070;
+  --male: #5A8AB0;
+  --danger: #C0392B;
+  --shadow-card: 0 3px 10px rgba(27, 43, 60, 0.08);
+  --shadow-hover: 0 8px 20px rgba(27, 43, 60, 0.14);
+  --radius: 12px;
+  --radius-sm: 10px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: linear-gradient(160deg, #EAF0F5 0%, #E2EBF3 55%, #DCE7F1 100%);
+  color: var(--text);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* 启动加载层 */
+.boot-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #EAF0F5 0%, #E2EBF3 55%, #DCE7F1 100%);
+  transition: opacity 0.45s var(--ease);
+}
+.boot-loading.hide { opacity: 0; pointer-events: none; }
+.boot-box { width: min(320px, 74vw); text-align: center; }
+.boot-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 8px;
+  margin-bottom: 30px;
+  font-family: 'STKaiti', 'KaiTi', serif;
+}
+.boot-bar {
+  height: 9px;
+  border-radius: 8px;
+  background: rgba(59, 107, 140, 0.15);
+  overflow: hidden;
+}
+.boot-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--primary-light), var(--primary));
+  transition: width 0.22s ease;
+}
+.boot-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--text-sub);
+}
+#header {
+  background: linear-gradient(120deg, #2E526E 0%, #3B6B8C 45%, #4E7FA5 100%);
+  padding: 12px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 14px rgba(31, 58, 82, 0.25);
+  z-index: 10;
+  position: relative;
+}
+#header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #FFFFFF;
+  letter-spacing: 5px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.18);
+}
+#header h1::before { content: "🏛"; font-size: 26px; }
+.maint-btn {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #FFFFFF;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 7px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.maint-btn:hover { background: rgba(255,255,255,0.3); }
+.badge {
+  background: rgba(255,255,255,0.18);
+  color: #EAF2F9;
+  border-radius: 30px;
+  padding: 3px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  border: 1px solid rgba(255,255,255,0.22);
+  backdrop-filter: blur(4px);
+}
+.badge.loading { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+#main { flex: 1; display: flex; overflow: hidden; position: relative; }
+#tree-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  background: radial-gradient(ellipse at 50% 0%, #F2F7FB 0%, #EAF0F5 70%, #E2EBF3 100%);
+  min-width: 0;
+  min-height: 0;
+  user-select: none;
+  touch-action: none;
+}
+#tree-container:active { cursor: grabbing; }
+#treeSvg { display: block; overflow: visible; }
+#treeViewport { transform-origin: 0 0; transform-box: view-box; }
+#empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text-sub);
+  font-size: 18px;
+  pointer-events: none;
+  text-align: center;
+  z-index: 1;
+}
+#empty-state .icon { font-size: 64px; opacity: 0.45; }
+#empty-state .hint { font-size: 14px; color: var(--text-faint); max-width: 400px; line-height: 1.7; }
+#empty-state .error { color: var(--danger); font-size: 14px; max-width: 460px; line-height: 1.7; }
+.tree-node { cursor: pointer; }
+.tree-node .bg {
+  fill: #FFFFFF;
+  stroke: var(--line);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 3px 8px rgba(27, 43, 60, 0.08));
+  transition: all 0.2s ease;
+}
+.tree-node:hover .bg { stroke: var(--primary-light); stroke-width: 2; filter: drop-shadow(0 8px 16px rgba(27, 43, 60, 0.14)); }
+.tree-node.selected .bg { stroke: var(--primary); stroke-width: 3; filter: drop-shadow(0 5px 18px rgba(59, 107, 140, 0.32)); }
+.tree-node .avatar-fallback { stroke: var(--line); stroke-width: 1.2; }
+.tree-node .avatar-img { pointer-events: none; }
+.tree-node .name-text {
+  font-size: 14px;
+  font-weight: 600;
+  fill: var(--text);
+  dominant-baseline: central;
+  text-anchor: middle;
+  letter-spacing: 1px;
+}
+.tree-node .date-text {
+  font-size: 10.5px;
+  fill: var(--text-sub);
+  dominant-baseline: central;
+  text-anchor: middle;
+  letter-spacing: 0.4px;
+}
+.tree-node .gender-tag { font-size: 11px; font-weight: 700; dominant-baseline: central; text-anchor: middle; }
+.tree-line { fill: none; stroke-linecap: round; }
+.tree-line.parent-child { stroke: var(--accent); stroke-width: 2; }
+.tree-line.marriage { stroke: var(--marriage); stroke-width: 3; }
+.tree-line.family { stroke: #7A8FA0; stroke-width: 2; }
+.marriage-knot { fill: var(--marriage); stroke: #FFFFFF; stroke-width: 1.5; }
+#detail-panel {
+  width: 0;
+  overflow: hidden;
+  background: var(--bg-panel);
+  border-left: 1px solid #D0DCE8;
+  transition: width 0.4s var(--ease);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: -6px 0 24px rgba(31, 58, 82, 0.08);
+}
+#detail-panel.open { width: 430px; min-width: 330px; }
+.panel-header {
+  padding: 16px 20px 12px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  background: linear-gradient(160deg, #F8FBFE 0%, #F0F6FB 100%);
+}
+.panel-header h2 { font-size: 19px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 10px; letter-spacing: 1px; }
+.close-btn {
+  background: none; border: none; font-size: 22px; color: var(--accent);
+  cursor: pointer; padding: 4px 9px; border-radius: 9px; transition: all 0.2s; line-height: 1;
+}
+.close-btn:hover { background: var(--line-soft); color: var(--text); }
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 22px 34px 22px;
+  scrollbar-width: thin;
+  scrollbar-color: #C6D4E2 transparent;
+}
+.panel-body::-webkit-scrollbar { width: 8px; }
+.panel-body::-webkit-scrollbar-thumb { background: #C6D4E2; border-radius: 8px; }
+.person-summary { display: flex; align-items: center; gap: 16px; padding: 6px 0 16px 0; border-bottom: 1px solid var(--line-soft); }
+.person-summary .avatar-lg {
+  width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+  border: 3px solid #FFFFFF; box-shadow: var(--shadow-card); flex-shrink: 0; background: var(--line-soft);
+}
+.person-summary .avatar-lg.fallback {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; font-weight: 600; color: #FFFFFF; text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.person-summary .summary-meta { flex: 1; min-width: 0; }
+.person-summary .s-name { font-size: 20px; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }
+.person-summary .s-dates { font-size: 13px; color: var(--text-sub); letter-spacing: 0.5px; }
+.field-section { padding: 14px 0 2px 0; }
+.field-section h3 {
+  font-size: 13px; font-weight: 600; color: var(--primary); letter-spacing: 2px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.field-section h3::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line) 0%, transparent 100%); }
+.detail-field { display: flex; padding: 7px 0; border-bottom: 1px solid #E8EEF5; font-size: 14px; line-height: 1.6; }
+.detail-field:last-child { border-bottom: none; }
+.detail-field .label { width: 72px; flex-shrink: 0; color: var(--text-sub); font-weight: 500; }
+.detail-field .value { flex: 1; color: var(--text); word-break: break-word; }
+.detail-field .value.empty { color: var(--text-faint); font-style: italic; }
+.file-section { margin-top: 16px; }
+.file-section h3 {
+  font-size: 13px; font-weight: 600; color: var(--primary); letter-spacing: 2px;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+}
+.file-section h3::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line) 0%, transparent 100%); }
+.file-grid { display: flex; flex-direction: column; gap: 12px; }
+.file-item { background: var(--card); border-radius: var(--radius-sm); padding: 12px 14px; border: 1px solid var(--line-soft); transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.file-item:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+.file-item .file-label { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; word-break: break-all; }
+.file-item img.media { max-width: 100%; border-radius: 8px; display: block; cursor: zoom-in; border: 1px solid var(--line-soft); }
+.video-thumb {
+  position: relative; width: 100%; border-radius: 8px; overflow: hidden;
+  background: #0F1B26; margin-bottom: 8px; border: 1px solid var(--line-soft);
+}
+.video-thumb video { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; background: #0F1B26; }
+.video-play-ov {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 20, 30, 0.30); color: #FFFFFF; font-size: 32px; letter-spacing: 2px;
+  transition: background 0.2s; pointer-events: none; text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.video-item:hover .video-play-ov { background: rgba(10, 20, 30, 0.10); }
+.txt-content {
+  background: #FFF8EC; border: 1px dashed #D8B98A; border-radius: 8px; padding: 10px 12px;
+  font-size: 13px; line-height: 1.6; color: #7A5A28; cursor: pointer;
+  transition: all 0.2s; text-align: center; font-weight: 500; letter-spacing: 1px;
+}
+.txt-content:hover { background: #FCEED6; border-color: #C49A5E; }
+.txt-loading { color: var(--text-sub); font-size: 13px; padding: 8px 2px; display: flex; align-items: center; gap: 8px; }
+.txt-loading::before {
+  content: ""; width: 13px; height: 13px; border: 2px solid var(--line);
+  border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.file-empty { color: var(--text-faint); font-size: 13px; padding: 10px 2px; font-style: italic; }
+.loading-row { color: var(--text-sub); font-size: 13px; padding: 12px 2px; display: flex; align-items: center; gap: 8px; }
+.loading-row::before {
+  content: ""; width: 13px; height: 13px; border: 2px solid var(--line);
+  border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+.gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.gallery-grid img {
+  width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 8px;
+  cursor: zoom-in; border: 1px solid var(--line-soft); background: var(--line-soft);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.gallery-grid img:hover { transform: scale(1.04); box-shadow: var(--shadow-card); }
+#lightbox {
+  position: fixed; inset: 0; background: rgba(10, 18, 26, 0.88);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(6px);
+  touch-action: none; overflow: hidden;
+}
+#lightbox.show { opacity: 1; pointer-events: auto; }
+#lightboxImg {
+  max-width: 88vw; max-height: 86vh; border-radius: 10px;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.5);
+  cursor: grab;
+}
+#lightboxImg.lb-anim { transition: transform 0.25s ease; }
+#lightboxImg.lb-dragging { cursor: grabbing; }
+.lb-strip {
+  position: absolute; left: 50%; bottom: 66px; transform: translateX(-50%);
+  display: flex; gap: 6px; padding: 8px 10px;
+  background: rgba(0,0,0,0.5); border-radius: 12px;
+  max-width: 86vw; overflow-x: auto; z-index: 2;
+}
+.lb-strip img {
+  width: 54px; height: 40px; object-fit: cover; border-radius: 6px;
+  border: 2px solid transparent; cursor: pointer; flex-shrink: 0;
+  max-width: none; max-height: none;
+  box-shadow: none;
+}
+.lb-strip img.active { border-color: #FFC64B; }
+.lb-strip img:hover { border-color: rgba(255,255,255,0.65); }
+#lightbox .lb-close {
+  position: absolute; top: 22px; right: 28px; background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 20px;
+  width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+}
+#lightbox .lb-close:hover { background: rgba(255,255,255,0.25); transform: rotate(90deg); }
+#lightbox .lb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; font-size: 34px; width: 52px; height: 64px; border-radius: 12px;
+  cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+  padding: 0 0 4px 0; line-height: 1;
+}
+#lightbox .lb-nav:hover { background: rgba(255,255,255,0.3); }
+#lightbox .lb-prev { left: 22px; }
+#lightbox .lb-next { right: 22px; }
+#lightbox .lb-count {
+  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.85); font-size: 14px; letter-spacing: 2px;
+  background: rgba(0,0,0,0.35); padding: 5px 16px; border-radius: 20px;
+}
+#docModal {
+  position: fixed; inset: 0; background: rgba(10, 18, 26, 0.7);
+  display: flex; align-items: center; justify-content: center; z-index: 1100;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+#docModal.show { opacity: 1; pointer-events: auto; }
+#docModal .dm-box {
+  width: min(760px, 92vw); max-height: 86vh; background: #FFFFFF;
+  border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 20px 70px rgba(0,0,0,0.5);
+}
+#docModal .dm-header {
+  padding: 12px 16px; background: #FFFDF8; border-bottom: 1px solid #E8E0D0;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;
+}
+#docModal .dm-title { font-size: 15px; font-weight: 600; color: var(--text); word-break: break-all; }
+#docModal .dm-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#docModal .dm-controls button {
+  background: #F3EFE6; border: 1px solid #DDD2BE; color: #6B4F2A;
+  font-size: 14px; font-weight: 700; width: 38px; height: 34px; border-radius: 9px;
+  cursor: pointer; transition: all 0.2s;
+}
+#docModal .dm-controls button:hover { background: #E9E1D0; }
+#docModal .dm-controls .lb-close {
+  position: static; width: 38px; height: 34px; font-size: 16px;
+  background: #F3EFE6; border-color: #DDD2BE; color: #6B4F2A; border-radius: 9px;
+}
+#docModal .dm-controls .lb-close:hover { background: #E9E1D0; transform: none; }
+#docModal .dm-body {
+  flex: 1; overflow-y: auto; padding: 22px 30px 32px 30px;
+  font-size: 16px; line-height: 1.9; color: #2B3A48; white-space: pre-wrap; word-break: break-word;
+  background: #FFFFFF;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+}
+#videoModal {
+  position: fixed; inset: 0; background: rgba(8, 13, 19, 0.85);
+  display: flex; align-items: center; justify-content: center; z-index: 1200;
+  opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+#videoModal.show { opacity: 1; pointer-events: auto; }
+#videoModal .vm-box {
+  width: min(880px, 94vw); max-height: 92vh; background: #11171E;
+  border-radius: 14px; display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+#videoModal .vm-header {
+  padding: 12px 16px; background: #1B242D; border-bottom: 1px solid #2C3843;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;
+}
+#videoModal .vm-title { font-size: 14px; font-weight: 600; color: #E6EDF3; word-break: break-all; }
+#videoModal .vm-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#videoModal .vm-controls button {
+  background: #2B3742; border: 1px solid #3D4A58; color: #DCE5EC;
+  font-size: 13px; font-weight: 600; min-width: 40px; height: 32px; padding: 0 10px; border-radius: 8px;
+  cursor: pointer; transition: background 0.2s;
+}
+#videoModal .vm-controls button:hover { background: #3A4754; }
+#videoModal .vm-controls .lb-close {
+  position: static; width: 38px; height: 32px; padding: 0; font-size: 15px;
+  background: #2B3742; border-color: #3D4A58; color: #DCE5EC; border-radius: 8px;
+}
+#videoModal .vm-controls .lb-close:hover { background: #3A4754; transform: none; }
+#videoModal .vm-body { background: #000; padding: 0; }
+#videoModal video {
+  display: block; width: 100%; max-height: calc(92vh - 57px); background: #000;
+  -webkit-user-drag: none; user-drag: none; user-select: none;
+}
+.video-item { cursor: pointer; }
+.video-item:hover { box-shadow: var(--shadow-hover); transform: translateY(-1px); }
+#timeline {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 84px;
+  pointer-events: none; z-index: 5; overflow: hidden;
+}
+#timeline .tl-axis {
+  position: absolute; top: 14px; bottom: 14px; left: 27px; width: 2px;
+  background: #9FB2C2; border-radius: 2px; opacity: 0.8;
+}
+#timeline .tl-title {
+  position: absolute; top: 10px; left: 12px;
+  font-size: 11px; font-weight: 700; color: #4A6288; letter-spacing: 3px;
+}
+#timeline .tl-mark {
+  position: absolute; left: 0; transform: translateY(-50%);
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 600; color: #5E7689;
+  white-space: nowrap;
+}
+#timeline .tl-mark .tl-year {
+  min-width: 36px; text-align: right;
+  background: rgba(247, 250, 253, 0.92);
+  padding: 1px 6px; border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(31, 58, 82, 0.10);
+}
+#timeline .tl-mark .tl-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: #9FB2C2; border: 1.5px solid #FFFFFF;
+  box-shadow: 0 0 0 1px #9FB2C2;
+}
+#toast {
+  position: fixed; bottom: 34px; left: 50%;
+  transform: translateX(-50%) translateY(120px);
+  background: rgba(30, 42, 54, 0.94); color: #F0F5FB;
+  padding: 12px 30px; border-radius: 40px; font-size: 14px;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.25); opacity: 0;
+  transition: all 0.5s var(--ease); z-index: 999; pointer-events: none;
+  max-width: 80vw; text-align: center; letter-spacing: 0.5px;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.zoom-controls {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 5;
+  touch-action: manipulation;
+}
+.zoom-controls button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(46, 82, 110, 0.28);
+  background: rgba(255, 255, 255, 0.92);
+  color: #2E526E;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(31, 58, 82, 0.20);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.zoom-controls button:hover { background: #FFFFFF; transform: scale(1.06); }
+.zoom-controls button:active { transform: scale(0.92); }
+@media (max-width: 860px) {
+  #main { flex-direction: column; }
+  #detail-panel {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    width: 100%; min-width: 0;
+    height: 56vh;
+    border-left: none; border-top: 1px solid #D0DCE8;
+    box-shadow: 0 -8px 30px rgba(31, 58, 82, 0.14);
+    z-index: 8;
+    transform: translateY(100vh);
+    transition: transform 0.4s var(--ease);
+  }
+  #detail-panel.open { transform: translateY(0); }
+  #header h1 { font-size: 20px; letter-spacing: 3px; }
+  #header h1::before { font-size: 22px; }
+  .gallery-grid { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 520px) {
+  #header { padding: 10px 14px; }
+  #header h1 { font-size: 17px; letter-spacing: 2px; gap: 10px; }
+  #header h1::before { font-size: 19px; }
+  .badge { font-size: 11px; padding: 2px 11px; }
+  .maint-btn { right: 12px; padding: 5px 12px; font-size: 12px; letter-spacing: 1px; }
+  .panel-body { padding: 12px 16px 24px 16px; }
+  #detail-panel { height: 50vh; }
+  .gallery-grid { grid-template-columns: repeat(3, 1fr); }
+  #lightbox .lb-nav {
+    top: auto; bottom: 16px;
+    width: 46px; height: 46px; border-radius: 50%;
+    font-size: 30px; padding: 0 0 3px 0;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.32);
+  }
+  #lightbox .lb-prev { left: 18px; }
+  #lightbox .lb-next { right: 18px; }
+  .lb-strip { bottom: 74px; max-width: 90vw; }
+  .lb-strip img { width: 44px; height: 34px; }
+}
+</style>
+</head>
+<body>
+<!-- 全局启动加载层：等待族谱数据解析与布局计算完成后再进入主界面 -->
+<div id="bootLoading" class="boot-loading">
+  <div class="boot-box">
+    <div class="boot-title">张氏族谱</div>
+    <div class="boot-bar"><div class="boot-bar-fill" id="bootFill"></div></div>
+    <div class="boot-meta"><span id="bootText">正在加载数据…</span><span id="bootPct">0%</span></div>
+  </div>
+</div>
+<header id="header">
+  <h1>张氏族谱 <span class="badge loading" id="personCount">加载中…</span></h1>
+  <button class="maint-btn" id="maintainBtn" title="查看维护信息">维护信息</button>
+</header>
+<div id="main">
+  <div id="tree-container">
+    <div id="timeline">
+      <div class="tl-axis"></div>
+      <div class="tl-title">年代</div>
+    </div>
+    <div id="empty-state">
+      <div class="icon">📜</div>
+      <div>正在加载族谱…</div>
+      <div class="hint">自动读取同目录下的 <strong>zupu.txt</strong><br>并探测 <strong>出生日期+姓名</strong> 文件夹中的图集 / 文档 / 视频</div>
+    </div>
+    <svg id="treeSvg"></svg>
+    <div class="zoom-controls" id="zoomControls">
+      <button id="zoomInBtn" title="放大">＋</button>
+      <button id="zoomOutBtn" title="缩小">－</button>
+      <button id="zoomResetBtn" title="显示复位">↺</button>
+    </div>
+  </div>
+  <aside id="detail-panel">
+    <div class="panel-header">
+      <h2 id="detailName">个人详细信息</h2>
+      <button class="close-btn" id="closeDetail" title="关闭">✕</button>
+    </div>
+    <div class="panel-body" id="detailBody">
+      <div style="color:#6D8498; text-align:center; padding:36px 0; font-size:14px;">点击树状图中的人物查看详情</div>
+    </div>
+  </aside>
+</div>
+<div id="lightbox">
+  <button class="lb-close" id="lightboxClose" title="关闭">✕</button>
+  <button class="lb-nav lb-prev" id="lbPrev" title="上一张">‹</button>
+  <img id="lightboxImg" alt="图片预览">
+  <button class="lb-nav lb-next" id="lbNext" title="下一张">›</button>
+  <div class="lb-strip" id="lbStrip"></div>
+  <div class="lb-count" id="lbCount"></div>
+</div>
+<div id="docModal">
+  <div class="dm-box">
+    <div class="dm-header">
+      <div class="dm-title" id="docModalTitle">文档</div>
+      <div class="dm-controls">
+        <button id="docZoomOut" title="缩小字体">A−</button>
+        <button id="docZoomIn" title="放大字体">A+</button>
+        <button class="lb-close" id="docModalClose" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="dm-body" id="docModalBody">加载中…</div>
+  </div>
+</div>
+<div id="videoModal">
+  <div class="vm-box">
+    <div class="vm-header">
+      <div class="vm-title" id="videoModalTitle">视频</div>
+      <div class="vm-controls">
+        <button id="videoSpeed" title="切换播放速度">1x</button>
+        <button class="lb-close" id="videoModalClose" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="vm-body">
+      <video id="videoModalPlayer" controls preload="auto" draggable="false"></video>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+(function () {
+  'use strict';
+
+  var treeContainer = document.getElementById('tree-container');
+  var treeSvg = document.getElementById('treeSvg');
+  var emptyState = document.getElementById('empty-state');
+  var detailPanel = document.getElementById('detail-panel');
+  var detailBody = document.getElementById('detailBody');
+  var detailName = document.getElementById('detailName');
+  var closeDetail = document.getElementById('closeDetail');
+  var personCount = document.getElementById('personCount');
+  var maintainBtn = document.getElementById('maintainBtn');
+  var zoomControls = document.getElementById('zoomControls');
+  var zoomInBtn = document.getElementById('zoomInBtn');
+  var zoomOutBtn = document.getElementById('zoomOutBtn');
+  var zoomResetBtn = document.getElementById('zoomResetBtn');
+  var toast = document.getElementById('toast');
+  var lightbox = document.getElementById('lightbox');
+  var lightboxImg = document.getElementById('lightboxImg');
+  var lightboxClose = document.getElementById('lightboxClose');
+  var lbPrev = document.getElementById('lbPrev');
+  var lbNext = document.getElementById('lbNext');
+  var lbCount = document.getElementById('lbCount');
+  var lbStrip = document.getElementById('lbStrip');
+  var docModal = document.getElementById('docModal');
+  var docModalTitle = document.getElementById('docModalTitle');
+  var docModalBody = document.getElementById('docModalBody');
+  var docModalClose = document.getElementById('docModalClose');
+  var docZoomIn = document.getElementById('docZoomIn');
+  var docZoomOut = document.getElementById('docZoomOut');
+  var videoModal = document.getElementById('videoModal');
+  var videoModalTitle = document.getElementById('videoModalTitle');
+  var videoModalPlayer = document.getElementById('videoModalPlayer');
+  var videoModalClose = document.getElementById('videoModalClose');
+  var videoSpeedBtn = document.getElementById('videoSpeed');
+  var timelineEl = document.getElementById('timeline');
+
+  var NODE_W = 150, NODE_H = 96, AVATAR_R = 24;
+  var H_SPACING = 30, V_SPACING = 60, MARRIAGE_GAP = 18, TOP_OFFSET = 40;
+  var IMG_EXTS = ['.webp', '.jpg', '.jpeg', '.png', '.gif', '.bmp'];
+  var VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.ogg'];
+  var MAX_INDEX = 99, MISS_LIMIT = 2;
+
+  var allPeople = [], peopleMap = {}, fields = [], rootNodes = [];
+  var selectedId = null, autoFileMap = {};
+  var svgScale = 1, svgBaseW = 0, svgBaseH = 0;
+  var panX = 0, panY = 0, viewMinY = 0;
+  var isDragging = false, dragStartX = 0, dragStartY = 0, panStartX = 0, panStartY = 0;
+  var touchStartDist = 0, touchStartScale = 1, touchMidX = 0, touchMidY = 0, touchGx = 0, touchGy = 0;
+  var treeViewport = null;
+  var currentNodes = [], tlMarks = [];
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function safeStr(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
+  function getPersonId(p) { return safeStr(p.姓名) + '|' + safeStr(p.出生日期); }
+  function encUrl(path) { return encodeURI(path); }
+
+  var toastTimer = null;
+  function showToast(msg, duration) {
+    duration = duration || 2600;
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.classList.remove('show'); }, duration);
+  }
+
+  function parseZupu(text) {
+    var lines = text.split(/\r?\n/), f = [], dataLines = [];
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+      if (line.indexOf('##FIELDS:') === 0) {
+        f = line.replace(/^##FIELDS:\s*/, '').split(/\s*\|\s*/).map(function (s) { return s.trim(); });
+        continue;
+      }
+      if (line.charAt(0) === '#') continue;
+      dataLines.push(line);
+    }
+    if (f.length === 0) {
+      f = ['姓名', '出生日期', '性别', '父亲', '母亲', '配偶', '出生地', '死亡日期', '死亡地点', '死亡原因', '生平'];
+    }
+    var result = [];
+    for (var j = 0; j < dataLines.length; j++) {
+      var parts = dataLines[j].split(/\s*\|\s*/);
+      var person = {};
+      for (var k = 0; k < f.length; k++) {
+        var val = (k < parts.length) ? parts[k].trim() : '';
+        // “-”为无信息填充符号：等同留空，不参与任何亲属关联匹配
+        if (val === '-') val = '';
+        person[f[k]] = val;
+      }
+      if (!person.姓名) person.姓名 = '';
+      if (!person.出生日期) person.出生日期 = '';
+      result.push(person);
+    }
+    return { fields: f, people: result };
+  }
+
+  function mergePeople(rawList) {
+    var map = {};
+    for (var i = 0; i < rawList.length; i++) {
+      var p = rawList[i], id = getPersonId(p);
+      if (!id || id === '|') continue;
+      if (!map[id]) {
+        map[id] = {};
+        for (var key in p) map[id][key] = p[key];
+      } else {
+        for (var key2 in p) {
+          var v = p[key2];
+          if (v && v.trim() !== '' && key2 in map[id]) map[id][key2] = v.trim();
+        }
+      }
+    }
+    var arr = [];
+    for (var id2 in map) arr.push(map[id2]);
+    return arr;
+  }
+  function buildTree(people) {
+    var i, j;
+    for (i = 0; i < people.length; i++) {
+      var p = people[i];
+      p._id = getPersonId(p);
+      p._children = [];
+      p._spouse = null;
+      p._parent = null;
+      p._level = 0;
+      p._x = 0; p._y = 0;
+      p._sw = null;
+      p._placed = false;
+      p._primary = false;
+    }
+    for (i = 0; i < people.length; i++) {
+      var cur = people[i];
+      var father = safeStr(cur.父亲);
+      var mother = safeStr(cur.母亲);
+      var parent = null;
+      if (father) {
+        for (j = 0; j < people.length; j++) {
+          if (people[j].姓名 === father) { parent = people[j]; break; }
+        }
+      }
+      if (!parent && mother) {
+        for (j = 0; j < people.length; j++) {
+          if (people[j].姓名 === mother) { parent = people[j]; break; }
+        }
+      }
+      if (parent && parent._id !== cur._id) {
+        cur._parent = parent;
+        if (parent._children.indexOf(cur) < 0) parent._children.push(cur);
+      }
+    }
+    for (i = 0; i < people.length; i++) {
+      var p2 = people[i];
+      if (p2._spouse) continue;
+      var spouseName = safeStr(p2.配偶);
+      if (!spouseName) continue;
+      for (j = 0; j < people.length; j++) {
+        var q = people[j];
+        // 对方必须还未配对；若已被其他记录配为配偶则跳过，
+        // 避免“张运驰-周茜”这类夫妻关系被后出现的重复配偶字段覆盖掉
+        if (q._id !== p2._id && q.姓名 === spouseName && !q._spouse) {
+          p2._spouse = q;
+          q._spouse = p2;
+          p2._primary = true;
+          break;
+        }
+      }
+    }
+    for (i = 0; i < people.length; i++) {
+      var p3 = people[i];
+      if (p3._spouse && p3._primary && p3._spouse._primary) p3._spouse._primary = false;
+    }
+    // 夫妻双方子女合并到 primary 一方统一布局：
+    // 子女按“父亲”字段挂靠，若挂在非 primary 一方（如母亲姓氏谱系），会导致该夫妻的子女不被布局
+    for (i = 0; i < people.length; i++) {
+      var pv = people[i];
+      if (pv._spouse && pv._primary) {
+        if (pv._spouse._children.length > 0) {
+          for (j = 0; j < pv._spouse._children.length; j++) {
+            if (pv._children.indexOf(pv._spouse._children[j]) < 0) pv._children.push(pv._spouse._children[j]);
+          }
+        }
+        // 夫妻双方共享同一份子女列表（顺序一致），
+        // 保证无论从哪一方进入遍历/布局都不会漏掉子女（如赵墨菲挂在 primary 名下）
+        pv._spouse._children = pv._children;
+      }
+    }
+    var roots = [];
+    for (i = 0; i < people.length; i++) {
+      var rp = people[i];
+      // 无父系的为根；若本人无父系但其配偶挂在他人家谱下（配偶有父系），则由配偶带动，不作为独立根
+      // 避免配偶人物（父母未知、填 “-”）被当作独立根排到顶层，把子女层挤“向上”
+      if (!rp._parent && !(rp._spouse && rp._spouse._parent)) roots.push(rp);
+    }
+    if (roots.length === 0 && people.length > 0) {
+      roots = [people[0]];
+    }
+    function setLevel(node, level) {
+      node._level = level;
+      for (var c = 0; c < node._children.length; c++) setLevel(node._children[c], level + 1);
+    }
+    for (i = 0; i < roots.length; i++) setLevel(roots[i], 0);
+    return roots;
+  }
+
+  function calcSubtreeWidth(node) {
+    if (node._sw !== null) return node._sw;
+    var w = 0, childW = 0, c;
+    if (node._spouse && node._primary) {
+      for (c = 0; c < node._children.length; c++) childW += calcSubtreeWidth(node._children[c]);
+      w = Math.max(2, childW);
+      node._sw = w;
+      node._spouse._sw = w;
+      return w;
+    }
+    if (node._spouse) {
+      w = calcSubtreeWidth(node._spouse);
+      node._sw = w;
+      return w;
+    }
+    if (node._children.length === 0) { node._sw = 1; return 1; }
+    for (c = 0; c < node._children.length; c++) w += calcSubtreeWidth(node._children[c]);
+    w = Math.max(1, w);
+    node._sw = w;
+    return w;
+  }
+
+  function layoutTree(roots) {
+    var i;
+    for (i = 0; i < roots.length; i++) calcSubtreeWidth(roots[i]);
+    var xOffset = 0;
+    for (i = 0; i < roots.length; i++) {
+      layoutNode(roots[i], xOffset, 0);
+      xOffset += roots[i]._sw;
+    }
+  }
+
+  function layoutNode(node, xOff, yOff) {
+    if (node._placed) return;
+    var c, halfGap = (MARRIAGE_GAP / (NODE_W + H_SPACING)) / 2;
+    if (node._spouse && !node._spouse._placed) {
+      var spouse = node._spouse;
+      var totalW = node._sw;
+      var centerX = xOff + totalW / 2;
+      node._x = centerX - halfGap - 0.5;
+      spouse._x = centerX + halfGap + 0.5;
+      node._y = yOff;
+      spouse._y = yOff;
+      node._placed = true;
+      spouse._placed = true;
+      var childX = xOff;
+      var oneChild = node._children.length === 1;
+      for (c = 0; c < node._children.length; c++) {
+        if (oneChild) {
+          // 唯一子女：让"该子女本人的头像"水平对齐到垂直线（夫妻中点）正下方；
+          // 若子女有配偶，将整个小家庭右移一个半间距，使本人节点中心正好落在线上，配偶排在其右侧
+          var only = node._children[0];
+          var shift = only._spouse ? halfGap + 0.5 : 0;
+          layoutNode(only, centerX - only._sw / 2 + shift, yOff + 1);
+        } else {
+          layoutNode(node._children[c], childX, yOff + 1);
+          childX += node._children[c]._sw || 1;
+        }
+      }
+      return;
+    }
+    node._x = xOff + 0.5;
+    node._y = yOff;
+    node._placed = true;
+    var childX2 = xOff;
+    var oneChild2 = node._children.length === 1;
+    for (c = 0; c < node._children.length; c++) {
+      if (oneChild2) {
+        // 唯一子女：让该子女本人头像水平对齐到单人节点正下方（连线垂直）
+        var only2 = node._children[0];
+        var shift2 = only2._spouse ? halfGap + 0.5 : 0;
+        layoutNode(only2, node._x - only2._sw / 2 + shift2, yOff + 1);
+      } else {
+        layoutNode(node._children[c], childX2, yOff + 1);
+        childX2 += node._children[c]._sw || 1;
+      }
+    }
+  }
+
+  function buildDrawData(roots) {
+    var allNodes = [], visited = {};
+    function collect(node) {
+      if (visited[node._id]) return;
+      visited[node._id] = true;
+      allNodes.push(node);
+      if (node._spouse && !visited[node._spouse._id]) {
+        visited[node._spouse._id] = true;
+        allNodes.push(node._spouse);
+      }
+      for (var i = 0; i < node._children.length; i++) collect(node._children[i]);
+    }
+    for (var r = 0; r < roots.length; r++) collect(roots[r]);
+
+    var xScale = NODE_W + H_SPACING, yScale = NODE_H + V_SPACING;
+    for (var i = 0; i < allNodes.length; i++) {
+      allNodes[i]._px = allNodes[i]._x * xScale + NODE_W / 2;
+      allNodes[i]._py = allNodes[i]._y * yScale + NODE_H / 2 + TOP_OFFSET;
+    }
+
+    // 可复用连线模板：每个人员节点都调用它生成连接线，保证全员统一、无遗漏
+    function appendNodeLinks(n, out) {
+      var sp = n._spouse;
+      var childCount = n._children.length;
+      if (sp && n._id < sp._id) {
+        var bottomY = Math.max(n._py, sp._py) + NODE_H / 2;
+        var hY = bottomY + LINK_LEN;
+        var mX = (n._px + sp._px) / 2;
+        out.marriage.push({ x1: n._px, y1: bottomY, x2: n._px, y2: hY });
+        out.marriage.push({ x1: sp._px, y1: bottomY, x2: sp._px, y2: hY });
+        out.marriage.push({ x1: n._px, y1: hY, x2: sp._px, y2: hY });
+        out.knots.push({ x: mX, y: hY });
+      }
+      // 子女线只由 primary 一方绘制（夫妻共享同一子女列表，避免重复画线）
+      if (sp && !n._primary) return;
+      if (childCount > 0) {
+        var firstChild = n._children[0];
+        var lastChild = n._children[childCount - 1];
+        var lineY = firstChild._py - NODE_H / 2 - LINK_LEN;
+        var startX = sp ? (n._px + sp._px) / 2 : n._px;
+        var startY = (sp ? Math.max(n._py, sp._py) : n._py) + NODE_H / 2 + LINK_LEN;
+        if (childCount === 1) {
+          // 唯一孩子：从中心点直接画一条垂直线，连到孩子头部，不画任何横线或斜线
+          out.family.push({ x1: startX, y1: startY, x2: startX, y2: firstChild._py - NODE_H / 2 });
+          return;
+        }
+        // 中点竖线：从夫妻中点（或单人节点）向下
+        out.family.push({ x1: startX, y1: startY, x2: startX, y2: lineY });
+        // 横线：先补 中点→最左子 段（保证中点竖线与横线连通）
+        if (firstChild._px !== startX) {
+          out.family.push({ x1: startX, y1: lineY, x2: firstChild._px, y2: lineY });
+        }
+        // 横线：再补 最左子→最右子 段（多子时）
+        if (lastChild._px !== firstChild._px) {
+          out.family.push({ x1: firstChild._px, y1: lineY, x2: lastChild._px, y2: lineY });
+        }
+        // 每子竖线：从横线向下连到孩子顶部
+        for (var k = 0; k < childCount; k++) {
+          var ch = n._children[k];
+          out.family.push({ x1: ch._px, y1: lineY, x2: ch._px, y2: ch._py - NODE_H / 2 });
+        }
+      }
+    }
+    var LINK_LEN = 20;
+    var out = { marriage: [], family: [], knots: [] };
+    for (i = 0; i < allNodes.length; i++) appendNodeLinks(allNodes[i], out);
+    return { nodes: allNodes, marriageLines: out.marriage, familyLines: out.family, parentLines: [], marriageKnots: out.knots };
+  }
+  function formatDateRange(p) {
+    var b = safeStr(p.出生日期), d = safeStr(p.死亡日期);
+    if (b && d) return b + ' — ' + d;
+    if (b) return b;
+    if (d) return '? — ' + d;
+    return '';
+  }
+
+  function getAvatarUrl(p) {
+    var files = autoFileMap[p._id];
+    if (files && files.images && files.images.length > 0) return files.images[0].url;
+    var gender = safeStr(p.性别);
+    return gender === '女' ? '默认女.jpg' : '默认男.jpg';
+  }
+
+  function renderTree(roots) {
+    if (!roots || roots.length === 0) { treeSvg.innerHTML = ''; return; }
+    var data = buildDrawData(roots);
+    var nodes = data.nodes;
+    var i, n;
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (i = 0; i < nodes.length; i++) {
+      n = nodes[i];
+      if (n._px < minX) minX = n._px;
+      if (n._px > maxX) maxX = n._px;
+      if (n._py < minY) minY = n._py;
+      if (n._py > maxY) maxY = n._py;
+    }
+    var pad = 20, tlW = 110;
+    var viewMinX = minX - pad - tlW;
+    viewMinY = minY - pad;
+    maxX = maxX + pad; maxY = maxY + pad;
+    var vw = Math.max(1, maxX - viewMinX), vh = Math.max(1, maxY - viewMinY);
+    svgBaseW = vw; svgBaseH = vh;
+    treeSvg.setAttribute('viewBox', viewMinX + ' ' + viewMinY + ' ' + vw + ' ' + vh);
+    treeSvg.setAttribute('width', vw);
+    treeSvg.setAttribute('height', vh);
+    treeSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    var s = '<g id="treeViewport" style="transform:translate(' + panX + 'px,' + panY + 'px) scale(' + svgScale + ')">';
+    s += '<defs><filter id="shadow1" x="-30%" y="-30%" width="160%" height="160%">'
+      + '<feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1B2B3C" flood-opacity="0.10"/>'
+      + '</filter><clipPath id="avatarClip" clipPathUnits="objectBoundingBox"><circle cx="0.5" cy="0.5" r="0.5"/></clipPath></defs>';
+
+    for (i = 0; i < data.marriageLines.length; i++) {
+      var m = data.marriageLines[i];
+      s += '<line x1="' + m.x1 + '" y1="' + m.y1 + '" x2="' + m.x2 + '" y2="' + m.y2 + '" class="tree-line marriage"/>';
+    }
+    for (i = 0; i < data.familyLines.length; i++) {
+      var fl = data.familyLines[i];
+      s += '<line x1="' + fl.x1 + '" y1="' + fl.y1 + '" x2="' + fl.x2 + '" y2="' + fl.y2 + '" class="tree-line family"/>';
+    }
+    for (i = 0; i < data.parentLines.length; i++) {
+      var pl = data.parentLines[i];
+      s += '<line x1="' + pl.x1 + '" y1="' + pl.y1 + '" x2="' + pl.x2 + '" y2="' + pl.y2 + '" class="tree-line parent-child"/>';
+    }
+    for (i = 0; i < data.marriageKnots.length; i++) {
+      var mk = data.marriageKnots[i];
+      s += '<circle class="marriage-knot" cx="' + mk.x + '" cy="' + mk.y + '" r="4.5"/>';
+    }
+
+    // 记录当前布局数据，供左侧固定时间轴使用
+    currentNodes = nodes;
+
+    for (i = 0; i < nodes.length; i++) {
+      n = nodes[i];
+      var name = safeStr(n.姓名) || '未知';
+      var gender = safeStr(n.性别);
+      var dateStr = formatDateRange(n);
+      var isSelected = (n._id === selectedId);
+      var cx = n._px, cy = n._py;
+      var bgX = cx - NODE_W / 2, bgY = cy - NODE_H / 2;
+      var avatarUrl = getAvatarUrl(n);
+      var avatarX = cx, avatarY = cy - NODE_H / 2 + AVATAR_R + 8;
+      var fbColor = (gender === '女') ? '#D08070' : '#5A8AB0';
+      var initial = name.charAt(0) || '?';
+
+      s += '<g class="tree-node' + (isSelected ? ' selected' : '') + '" data-id="' + escapeHtml(n._id) + '">';
+      s += '<rect x="' + bgX + '" y="' + bgY + '" width="' + NODE_W + '" height="' + NODE_H + '" class="bg" filter="url(#shadow1)"/>';
+      s += '<circle class="avatar-fallback" cx="' + avatarX + '" cy="' + avatarY + '" r="' + AVATAR_R + '" fill="' + fbColor + '" stroke="#BCC9D4" stroke-width="1.2"/>';
+      s += '<text class="avatar-initial" x="' + avatarX + '" y="' + (avatarY + 2) + '" font-size="18" font-weight="600" fill="#FFFFFF" text-anchor="middle" dominant-baseline="central">' + escapeHtml(initial) + '</text>';
+      if (avatarUrl) {
+        s += '<image class="avatar-img" clip-path="url(#avatarClip)" href="' + encUrl(avatarUrl) + '" xlink:href="' + encUrl(avatarUrl) + '" x="' + (avatarX - AVATAR_R) + '" y="' + (avatarY - AVATAR_R) + '" width="' + (AVATAR_R * 2) + '" height="' + (AVATAR_R * 2) + '" preserveAspectRatio="xMidYMid slice" style="display:none" pointer-events="none"/>';
+      }
+      var nameY = avatarY + AVATAR_R + 13;
+      s += '<text x="' + cx + '" y="' + nameY + '" class="name-text">' + escapeHtml(name) + '</text>';
+      s += '<text x="' + cx + '" y="' + (nameY + 16) + '" class="date-text">' + (dateStr ? escapeHtml(dateStr) : ' ') + '</text>';
+      if (gender) {
+        var gx = cx + NODE_W / 2 - 11, gy = bgY + 17;
+        var gColor = (gender === '女') ? '#D08070' : '#5A8AB0';
+        s += '<text class="gender-tag" x="' + gx + '" y="' + gy + '" fill="' + gColor + '">' + escapeHtml(gender) + '</text>';
+      }
+      s += '</g>';
+    }
+    s += '</g>';
+    treeSvg.innerHTML = s;
+
+    treeViewport = treeSvg.querySelector('#treeViewport');
+    var nodeEls = treeSvg.querySelectorAll('.tree-node');
+    for (i = 0; i < nodeEls.length; i++) {
+      nodeEls[i].addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectPerson(this.getAttribute('data-id'));
+      });
+    }
+    loadAllAvatars();
+    buildTimeline();
+    updateTimeline();
+  }
+
+  // 左侧固定时间轴（HTML 层，不随树滚动）：每代取最左边的人，
+  // 标注其出生年份，位置随树滚动同步更新。
+  function buildTimeline() {
+    if (!timelineEl) return;
+    var olds = timelineEl.querySelectorAll('.tl-mark');
+    for (var oi = 0; oi < olds.length; oi++) olds[oi].parentNode.removeChild(olds[oi]);
+    tlMarks = [];
+    var levelMap = {};
+    for (var i = 0; i < currentNodes.length; i++) {
+      var lv = currentNodes[i]._y;
+      if (!levelMap[lv]) levelMap[lv] = [];
+      levelMap[lv].push(currentNodes[i]);
+    }
+    var lvKeys = Object.keys(levelMap).sort(function (a, b) { return Number(a) - Number(b); });
+    for (var li = 0; li < lvKeys.length; li++) {
+      var lvNodes = levelMap[lvKeys[li]];
+      // 优先取该代最左且有出生日期的人标注年份；
+      // 整代都无出生日期时退而取最左者，标注“不详”，避免节点只有圆点没有标注
+      var leftMost = null, refWithYear = null;
+      for (var m = 0; m < lvNodes.length; m++) {
+        var nd0 = lvNodes[m];
+        if (!leftMost || nd0._px < leftMost._px) leftMost = nd0;
+        if (safeStr(nd0.出生日期) && (!refWithYear || nd0._px < refWithYear._px)) refWithYear = nd0;
+      }
+      var ref = refWithYear || leftMost;
+      if (!ref) continue;
+      var mark = document.createElement('div');
+      mark.className = 'tl-mark';
+      mark.innerHTML = '<span class="tl-year"></span><span class="tl-dot"></span>';
+      timelineEl.appendChild(mark);
+      var yr = safeStr(ref.出生日期).substring(0, 4);
+      tlMarks.push({ el: mark, treeY: ref._py, year: yr || '不详' });
+    }
+  }
+
+  function updateTimeline() {
+    if (!timelineEl || tlMarks.length === 0) return;
+    var ch = treeContainer.clientHeight;
+    for (var i = 0; i < tlMarks.length; i++) {
+      var t = tlMarks[i];
+      var top = panY + (t.treeY - viewMinY) * svgScale;
+      if (top < -30 || top > ch + 30) {
+        t.el.style.display = 'none';
+        continue;
+      }
+      t.el.style.display = '';
+      t.el.style.top = top + 'px';
+      t.el.querySelector('.tl-year').textContent = t.year;
+    }
+  }
+
+  // 头像加载：按"性别默认头像 → 个人文件夹首图"两级候选依次尝试。
+  // 用 HTML Image 预加载验证（其 load/error 事件最可靠），
+  // 任一候选成功才显示 SVG <image> 并隐藏首字圆；全部失败则保留首字圆。
+  function loadAllAvatars() {
+    var imgs = treeSvg.querySelectorAll('.avatar-img');
+    for (var i = 0; i < imgs.length; i++) {
+      (function (imgEl) {
+        if (imgEl.__avDone) return;
+        imgEl.__avDone = true;
+        var list = [];
+        var url = imgEl.getAttribute('href');
+        if (!url) url = imgEl.getAttributeNS('http://www.w3.org/1999/xlink', 'href');
+        if (url) list.push(url);
+        var g = imgEl.closest('.tree-node');
+        if (g) {
+          var p = peopleMap[g.getAttribute('data-id')];
+          if (p) {
+            var files = autoFileMap[p._id];
+            if (files && files.images && files.images.length > 0) list.push(files.images[0].url);
+            list.push(safeStr(p.性别) === '女' ? '默认女.jpg' : '默认男.jpg');
+          }
+        }
+        var seen = {}, uniq = [];
+        for (var k = 0; k < list.length; k++) {
+          if (list[k] && !seen[list[k]]) { seen[list[k]] = 1; uniq.push(list[k]); }
+        }
+        tryNext(0);
+        function tryNext(idx) {
+          if (idx >= uniq.length) return;
+          var im = new Image();
+          im.onload = function () {
+            var gn = imgEl.closest('.tree-node');
+            if (!gn) return;
+            imgEl.style.display = '';
+            var fb = gn.querySelector('.avatar-fallback');
+            var it = gn.querySelector('.avatar-initial');
+            if (fb) fb.style.display = 'none';
+            if (it) it.style.display = 'none';
+          };
+          im.onerror = function () { tryNext(idx + 1); };
+          im.src = uniq[idx];
+        }
+      })(imgs[i]);
+    }
+  }
+
+  function applyView() {
+    if (!treeViewport) return;
+    treeViewport.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + svgScale + ')';
+    updateTimeline();
+  }
+  function centerTree() {
+    var cw = treeContainer.clientWidth, ch = treeContainer.clientHeight;
+    var w = svgBaseW * svgScale, h = svgBaseH * svgScale;
+    panX = Math.max(0, (cw - w) / 2);
+    panY = Math.max(0, (ch - h) / 2);
+    applyView();
+  }
+  function zoomBy(factor) {
+    var cw = treeContainer.clientWidth, ch = treeContainer.clientHeight;
+    var mx = cw / 2, my = ch / 2;
+    var newScale = Math.min(Math.max(svgScale * factor, 0.15), 3.0);
+    if (newScale === svgScale) return;
+    var old = svgScale;
+    svgScale = newScale;
+    panX = mx - (mx - panX) * (svgScale / old);
+    panY = my - (my - panY) * (svgScale / old);
+    applyView();
+  }
+
+  treeContainer.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    var factor = e.deltaY > 0 ? 0.9 : 1.1;
+    var newScale = Math.min(Math.max(svgScale * factor, 0.15), 3.0);
+    if (newScale === svgScale) return;
+    var rect = treeContainer.getBoundingClientRect();
+    var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    var old = svgScale;
+    svgScale = newScale;
+    panX = mx - (mx - panX) * (svgScale / old);
+    panY = my - (my - panY) * (svgScale / old);
+    applyView();
+  }, { passive: false });
+
+  treeContainer.addEventListener('mousedown', function (e) {
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.target.closest && e.target.closest('.tree-node')) return;
+    if (e.target.closest && e.target.closest('video, #videoModal, #docModal, #lightbox')) return;
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    panStartX = panX;
+    panStartY = panY;
+    treeContainer.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!isDragging) return;
+    panX = panStartX + (e.clientX - dragStartX);
+    panY = panStartY + (e.clientY - dragStartY);
+    applyView();
+  });
+  window.addEventListener('mouseup', function () {
+    if (isDragging) { isDragging = false; treeContainer.style.cursor = 'grab'; }
+  });
+  treeContainer.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+  treeContainer.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) {
+      isDragging = true;
+      dragStartX = e.touches[0].clientX;
+      dragStartY = e.touches[0].clientY;
+      panStartX = panX;
+      panStartY = panY;
+    } else if (e.touches.length === 2) {
+      isDragging = false;
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.sqrt(dx * dx + dy * dy);
+      touchMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      touchMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      touchStartScale = svgScale;
+      touchGx = touchMidX - treeContainer.getBoundingClientRect().left;
+      touchGy = touchMidY - treeContainer.getBoundingClientRect().top;
+    }
+  }, { passive: true });
+  treeContainer.addEventListener('touchmove', function (e) {
+    if (e.touches.length === 1 && isDragging) {
+      e.preventDefault();
+      panX = panStartX + (e.touches[0].clientX - dragStartX);
+      panY = panStartY + (e.touches[0].clientY - dragStartY);
+      applyView();
+    } else if (e.touches.length === 2) {
+      e.preventDefault();
+      var dx = e.touches[0].clientX - e.touches[1].clientX;
+      var dy = e.touches[0].clientY - e.touches[1].clientY;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      if (touchStartDist > 0 && dist > 0) {
+        var newScale = Math.min(Math.max(touchStartScale * (dist / touchStartDist), 0.15), 3.0);
+        var mx = touchMidX - treeContainer.getBoundingClientRect().left;
+        var my = touchMidY - treeContainer.getBoundingClientRect().top;
+        svgScale = newScale;
+        panX = mx - (mx - touchGx) * (svgScale / touchStartScale);
+        panY = my - (my - touchGy) * (svgScale / touchStartScale);
+        applyView();
+      }
+    }
+  }, { passive: false });
+  treeContainer.addEventListener('touchend', function () { isDragging = false; });
+
+  treeContainer.addEventListener('click', function (e) {
+    if (e.target === treeSvg || e.target === treeContainer) closeDetailPanel();
+  });
+  function closeDetailPanel() {
+    detailPanel.classList.remove('open');
+    selectedId = null;
+    var els = treeSvg.querySelectorAll('.tree-node.selected');
+    for (var i = 0; i < els.length; i++) els[i].classList.remove('selected');
+  }
+  closeDetail.addEventListener('click', closeDetailPanel);
+  maintainBtn.addEventListener('click', function () {
+    if (maintainInfoCache !== null) {
+      docModalTitle.textContent = '维护信息';
+      docModalBody.textContent = maintainInfoCache;
+      docModalBody.style.fontSize = docFontSize + 'px';
+      docModal.classList.add('show');
+    } else {
+      openDocModal('维护信息.txt', '维护信息');
+    }
+  });
+  zoomInBtn.addEventListener('click', function () { zoomBy(1.2); });
+  zoomOutBtn.addEventListener('click', function () { zoomBy(1 / 1.2); });
+  zoomResetBtn.addEventListener('click', centerTree);
+  // 阻止按钮上的按下/双击事件冒泡到画布（避免触发拖拽平移）
+  ['mousedown', 'touchstart', 'dblclick'].forEach(function (t) {
+    zoomControls.addEventListener(t, function (e) { e.stopPropagation(); });
+  });
+
+  function renderSummary(p) {
+    var name = safeStr(p.姓名) || '未知';
+    var gender = safeStr(p.性别);
+    var icon = gender === '女' ? '👩' : (gender === '男' ? '👨' : '👤');
+    var avatarUrl = getAvatarUrl(p);
+    var dateStr = formatDateRange(p);
+    var color = gender === '女' ? '#D08070' : '#5A8AB0';
+    var initial = escapeHtml(name.charAt(0) || '?');
+    var avatarHtml;
+    if (avatarUrl) {
+      avatarHtml = '<div style="position:relative;width:72px;height:72px;flex-shrink:0">'
+        + '<img class="avatar-lg" style="position:absolute;inset:0;width:100%;height:100%" src="' + encUrl(avatarUrl) + '" alt="头像" '
+        + 'onerror="var p=this.parentNode;this.style.display=\'none\';var f=p.querySelector(\'.avatar-lg.fallback\');if(f)f.style.display=\'flex\';">'
+        + '<div class="avatar-lg fallback" style="display:none;background:' + color + '">' + initial + '</div>'
+        + '</div>';
+    } else {
+      avatarHtml = '<div class="avatar-lg fallback" style="background:' + color + '">' + initial + '</div>';
+    }
+    return '<div class="person-summary">' + avatarHtml
+      + '<div class="summary-meta"><div class="s-name">' + escapeHtml(name) + '</div>'
+      + '<div class="s-dates">' + (dateStr ? '🕰 ' + escapeHtml(dateStr) : '🕰 生卒不详') + '</div></div></div>';
+  }
+
+  function renderFields(p) {
+    var html = '<div class="field-section"><h3>基本信息</h3>';
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i], v = safeStr(p[f]);
+      html += '<div class="detail-field"><span class="label">' + escapeHtml(f) + '</span>'
+        + '<span class="value' + (v ? '' : ' empty') + '">' + (v ? escapeHtml(v) : '—') + '</span></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function renderFilesSection(p) {
+    var id = p._id, files = autoFileMap[id];
+    if (!files) {
+      return '<div class="file-section"><h3>个人档案</h3><div class="loading-row">正在探测个人文件夹…</div></div>';
+    }
+    var html = '<div class="file-section"><h3>个人档案</h3>';
+    if (files.images.length === 0 && files.docs.length === 0 && files.videos.length === 0) {
+      html += '<div class="file-empty">📁 未发现个人文件（可手动将文件放入 “' + escapeHtml(safeStr(p.出生日期) + safeStr(p.姓名)) + '” 文件夹）</div></div>';
+      return html;
+    }
+    if (files.images.length > 0) {
+      html += '<div style="margin:6px 0 12px 0;"><div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;font-weight:500;">🖼 图集（' + files.images.length + '）</div><div class="gallery-grid">';
+      for (var i = 0; i < files.images.length; i++) {
+        var img = files.images[i];
+        html += '<img src="' + encUrl(img.url) + '" alt="' + escapeHtml(img.file) + '" loading="lazy" onerror="this.style.display=\'none\'" onclick="window.__openLightbox(\'' + encUrl(img.url) + '\',' + i + ')">';
+      }
+      html += '</div></div>';
+    }
+    if (files.docs.length > 0) {
+      html += '<div style="margin:14px 0 12px 0;"><div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;font-weight:500;">📄 文档（' + files.docs.length + '）</div><div class="file-grid">';
+      for (var j = 0; j < files.docs.length; j++) {
+        var doc = files.docs[j];
+        html += '<div class="file-item"><div class="file-label">📄 ' + escapeHtml(doc.file) + '</div>'
+          + '<div class="txt-content" data-url="' + encUrl(doc.url) + '">点击阅读全文</div></div>';
+      }
+      html += '</div></div>';
+    }
+    if (files.videos.length > 0) {
+      html += '<div style="margin:14px 0 12px 0;"><div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;font-weight:500;">🎬 视频（' + files.videos.length + '）</div><div class="file-grid">';
+      for (var k = 0; k < files.videos.length; k++) {
+        var v = files.videos[k];
+        html += '<div class="file-item video-item" data-url="' + encUrl(v.url) + '" title="点击播放">'
+          + '<div class="video-thumb"><video class="media" src="' + encUrl(v.url) + '#t=0.1" preload="metadata" muted playsinline draggable="false"></video>'
+          + '<div class="video-play-ov">▶</div></div>'
+          + '<div class="file-label">🎬 ' + escapeHtml(v.file) + '</div></div>';
+      }
+      html += '</div></div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function selectPerson(id) {
+    var p = peopleMap[id];
+    if (!p) return;
+    selectedId = id;
+    detailPanel.classList.add('open');
+    var html = renderSummary(p) + renderFields(p);
+    html += '<div id="filesRegion">' + renderFilesSection(p) + '</div>';
+    detailBody.innerHTML = html;
+    bindDocLazyLoad();
+    var els = treeSvg.querySelectorAll('.tree-node');
+    for (var i = 0; i < els.length; i++) els[i].classList.toggle('selected', els[i].getAttribute('data-id') === id);
+  }
+
+  function decodeText(buf) {
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+    catch (e) {
+      try { return new TextDecoder('gbk').decode(buf); }
+      catch (e2) { return new TextDecoder('utf-8').decode(buf); }
+    }
+  }
+
+  function bindDocLazyLoad() {
+    var contents = detailBody.querySelectorAll('.txt-content[data-url]');
+    for (var i = 0; i < contents.length; i++) {
+      contents[i].addEventListener('click', function () {
+        var url = this.getAttribute('data-url');
+        if (!url) return;
+        var labelEl = this.parentNode ? this.parentNode.querySelector('.file-label') : null;
+        openDocModal(url, labelEl ? labelEl.textContent.replace(/^\S+\s*/, '') : '文档');
+      });
+    }
+    var videos = detailBody.querySelectorAll('.video-item[data-url]');
+    for (var j = 0; j < videos.length; j++) {
+      videos[j].addEventListener('click', function () {
+        var url = this.getAttribute('data-url');
+        if (!url) return;
+        var labelEl = this.querySelector('.file-label');
+        openVideoModal(url, labelEl ? labelEl.textContent.replace(/^\S+\s*/, '') : '视频');
+      });
+    }
+  }
+
+  var lbList = [], lbIdx = 0;
+  var lbScale = 1, lbTx = 0, lbTy = 0;
+  var lbT = { mode: 0, x0: 0, y0: 0, sx: 0, moved: 0, s0: 1, t0x: 0, t0y: 0, d0: 0, gx: 0, gy: 0, lastTap: 0 };
+  function applyLbTransform(animate) {
+    if (animate) lightboxImg.classList.add('lb-anim');
+    lightboxImg.style.transform = 'translate(' + lbTx + 'px,' + lbTy + 'px) scale(' + lbScale + ')';
+    if (animate) setTimeout(function () { lightboxImg.classList.remove('lb-anim'); }, 280);
+  }
+  function resetLbZoom() {
+    lbScale = 1; lbTx = 0; lbTy = 0;
+    applyLbTransform(true);
+  }
+  function toggleLbZoom() {
+    if (lbScale > 1) { lbScale = 1; lbTx = 0; lbTy = 0; }
+    else { lbScale = 2.5; lbTx = 0; lbTy = 0; }
+    applyLbTransform(true);
+  }
+  function renderLbStrip() {
+    lbStrip.innerHTML = '';
+    if (!lbList.length) return;
+    for (var si = 0; si < lbList.length; si++) {
+      (function (i) {
+        var t = document.createElement('img');
+        t.className = 'lb-thumb';
+        t.src = encUrl(lbList[i].url);
+        t.alt = '预览' + (i + 1);
+        t.addEventListener('click', function (e) { e.stopPropagation(); lbGoTo(i); });
+        lbStrip.appendChild(t);
+      })(si);
+    }
+  }
+  function updateLbNav() {
+    if (!lbList.length) {
+      lbCount.textContent = '';
+      lbPrev.style.visibility = 'hidden';
+      lbNext.style.visibility = 'hidden';
+      return;
+    }
+    lbCount.textContent = (lbIdx + 1) + ' / ' + lbList.length;
+    lbPrev.style.visibility = 'visible';
+    lbNext.style.visibility = 'visible';
+    var thumbs = lbStrip.children;
+    for (var i = 0; i < thumbs.length; i++) thumbs[i].classList.toggle('active', i === lbIdx);
+    var cur = thumbs[lbIdx];
+    if (cur && cur.scrollIntoView) {
+      try { cur.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (err) { cur.scrollIntoView(); }
+    }
+  }
+  window.__openLightbox = function (url, idx) {
+    var p = selectedId ? peopleMap[selectedId] : null;
+    var files = p ? autoFileMap[p._id] : null;
+    lbList = (files && files.images && files.images.length) ? files.images : [];
+    if (lbList.length) {
+      lbIdx = (typeof idx === 'number' && idx >= 0 && idx < lbList.length) ? idx : 0;
+      lightboxImg.src = encUrl(lbList[lbIdx].url);
+    } else {
+      lbList = [];
+      lbIdx = 0;
+      lightboxImg.src = url;
+    }
+    renderLbStrip();
+    resetLbZoom();
+    lbT.mode = 0; lbT.lastTap = 0; lbT.moved = 0;
+    lightboxImg.classList.remove('lb-dragging');
+    updateLbNav();
+    lightbox.classList.add('show');
+  };
+  function lbGo(step) {
+    if (!lbList.length) return;
+    lbIdx = (lbIdx + step + lbList.length) % lbList.length;
+    lightboxImg.src = encUrl(lbList[lbIdx].url);
+    resetLbZoom();
+    updateLbNav();
+  }
+  function lbGoTo(i) {
+    if (!lbList.length) return;
+    lbIdx = i;
+    lightboxImg.src = encUrl(lbList[i].url);
+    resetLbZoom();
+    updateLbNav();
+  }
+  lbPrev.addEventListener('click', function (e) { e.stopPropagation(); lbGo(-1); });
+  lbNext.addEventListener('click', function (e) { e.stopPropagation(); lbGo(1); });
+  function closeLightbox() {
+    lightbox.classList.remove('show');
+    lightboxImg.src = '';
+    lightboxImg.style.transform = '';
+    lightboxImg.classList.remove('lb-anim', 'lb-dragging');
+    lbList = [];
+    lbStrip.innerHTML = '';
+    lbScale = 1; lbTx = 0; lbTy = 0;
+    lbT.mode = 0; lbT.lastTap = 0;
+  }
+  lightbox.addEventListener('click', function (e) {
+    if (lbT.moved > 8) { lbT.moved = 0; return; }
+    if (e.target !== lightboxImg) closeLightbox();
+  });
+  lightbox.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  lightboxClose.addEventListener('click', closeLightbox);
+  // 滚轮缩放（桌面端，以鼠标位置为锚点）
+  lightbox.addEventListener('wheel', function (e) {
+    if (!lightbox.classList.contains('show')) return;
+    e.preventDefault();
+    var rect = lightboxImg.getBoundingClientRect();
+    var mx = e.clientX - (rect.left + rect.width / 2);
+    var my = e.clientY - (rect.top + rect.height / 2);
+    var ns = Math.min(Math.max(lbScale * (e.deltaY > 0 ? 0.9 : 1.1), 1), 6);
+    if (ns === lbScale) return;
+    lbTx = mx - (mx - lbTx) * (ns / lbScale);
+    lbTy = my - (my - lbTy) * (ns / lbScale);
+    lbScale = ns;
+    applyLbTransform(true);
+  }, { passive: false });
+  // 触摸手势：单指左右滑动切换（缩放时平移）、双指捏合缩放、双击放大/恢复
+  lightbox.addEventListener('touchstart', function (e) {
+    if (!lightbox.classList.contains('show')) return;
+    if (e.touches.length === 1) {
+      lbT.mode = 1;
+      lbT.x0 = e.touches[0].clientX; lbT.y0 = e.touches[0].clientY;
+      lbT.sx = e.touches[0].clientX;
+      lbT.moved = 0;
+      lbT.s0 = lbScale; lbT.t0x = lbTx; lbT.t0y = lbTy;
+      lightboxImg.classList.add('lb-dragging');
+    } else if (e.touches.length === 2) {
+      lbT.mode = 2;
+      var dx = e.touches[1].clientX - e.touches[0].clientX;
+      var dy = e.touches[1].clientY - e.touches[0].clientY;
+      lbT.d0 = Math.sqrt(dx * dx + dy * dy);
+      lbT.s0 = lbScale; lbT.t0x = lbTx; lbT.t0y = lbTy;
+      var cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      var cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      var r = lightboxImg.getBoundingClientRect();
+      lbT.gx = cx - (r.left + r.width / 2);
+      lbT.gy = cy - (r.top + r.height / 2);
+      lightboxImg.classList.add('lb-dragging');
+    }
+  }, { passive: false });
+  lightbox.addEventListener('touchmove', function (e) {
+    if (lbT.mode === 0) return;
+    e.preventDefault();
+    if (e.touches.length === 1 && lbT.mode === 1) {
+      var dx = e.touches[0].clientX - lbT.x0;
+      var dy = e.touches[0].clientY - lbT.y0;
+      lbT.moved = Math.max(lbT.moved, Math.abs(dx) + Math.abs(dy));
+      if (lbScale > 1) {
+        lbTx = lbT.t0x + dx; lbTy = lbT.t0y + dy;
+      } else {
+        lbTx = dx; lbTy = dy;
+      }
+      applyLbTransform(false);
+    } else if (e.touches.length === 2 && lbT.mode === 2) {
+      var dx2 = e.touches[1].clientX - e.touches[0].clientX;
+      var dy2 = e.touches[1].clientY - e.touches[0].clientY;
+      var d = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+      var ns = Math.min(Math.max(lbT.s0 * (d / lbT.d0), 1), 6);
+      var cx2 = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      var cy2 = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      var r2 = lightboxImg.getBoundingClientRect();
+      var mx2 = cx2 - (r2.left + r2.width / 2);
+      var my2 = cy2 - (r2.top + r2.height / 2);
+      lbScale = ns;
+      lbTx = mx2 - (lbT.gx - lbT.t0x) * (ns / lbT.s0);
+      lbTy = my2 - (lbT.gy - lbT.t0y) * (ns / lbT.s0);
+      applyLbTransform(false);
+    }
+  }, { passive: false });
+  lightbox.addEventListener('touchend', function (e) {
+    if (lbT.mode === 0) return;
+    var wasMove = lbT.moved;
+    if (lbT.mode === 1 && lbScale <= 1) {
+      var dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : 0) - lbT.sx;
+      if (wasMove > 8 && Math.abs(dx) > 60 && lbList.length > 1) {
+        lbGo(dx < 0 ? 1 : -1);
+        lbT.moved = 0;
+        lightboxImg.classList.remove('lb-dragging');
+        lbT.mode = 0;
+        return;
+      }
+      lbTx = 0; lbTy = 0;
+      applyLbTransform(true);
+    }
+    if (wasMove < 8) {
+      var now = Date.now();
+      if (now - lbT.lastTap < 300) { toggleLbZoom(); lbT.lastTap = 0; }
+      else lbT.lastTap = now;
+    }
+    lightboxImg.classList.remove('lb-dragging');
+    lbT.mode = 0;
+  });
+  lightboxImg.addEventListener('dblclick', function (e) { e.preventDefault(); toggleLbZoom(); });
+
+  var docFontSize = 16;
+  function openDocModal(url, title) {
+    docModalTitle.textContent = title || '文档';
+    docModalBody.textContent = '正在加载文档…';
+    docModalBody.style.fontSize = docFontSize + 'px';
+    docModal.classList.add('show');
+    fetch(url, { cache: 'no-store' })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.status);
+        return res.arrayBuffer();
+      })
+      .then(function (buf) {
+        docModalBody.textContent = decodeText(buf);
+      })
+      .catch(function () {
+        docModalBody.textContent = '⚠ 文档读取失败：' + url;
+      });
+  }
+  function closeDocModal() {
+    docModal.classList.remove('show');
+    docModalBody.textContent = '';
+  }
+  var videoSpeeds = [0.5, 1, 1.5, 2], videoSpeedIdx = 1;
+  function openVideoModal(url, title) {
+    videoModalTitle.textContent = title || '视频';
+    videoModalPlayer.pause();
+    videoModalPlayer.removeAttribute('src');
+    videoModalPlayer.load();
+    videoModalPlayer.src = url;
+    videoSpeedIdx = 1;
+    videoSpeedBtn.textContent = '1x';
+    videoModalPlayer.playbackRate = 1;
+    videoModal.classList.add('show');
+    var pr = videoModalPlayer.play();
+    if (pr && pr.catch) pr.catch(function () {});
+  }
+  function closeVideoModal() {
+    videoModal.classList.remove('show');
+    videoModalPlayer.pause();
+    videoModalPlayer.removeAttribute('src');
+    videoModalPlayer.load();
+  }
+  videoSpeedBtn.addEventListener('click', function () {
+    videoSpeedIdx = (videoSpeedIdx + 1) % videoSpeeds.length;
+    videoModalPlayer.playbackRate = videoSpeeds[videoSpeedIdx];
+    videoSpeedBtn.textContent = videoSpeeds[videoSpeedIdx] + 'x';
+  });
+  videoModalClose.addEventListener('click', closeVideoModal);
+  videoModal.addEventListener('click', function (e) {
+    if (e.target === videoModal) closeVideoModal();
+  });
+  // 阻止 video 原生控件的拖动触发浏览器图片拖拽（"拖出一整张图片"现象）
+  videoModal.addEventListener('dragstart', function (e) { e.preventDefault(); });
+  videoModal.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+  videoModal.addEventListener('mousemove', function (e) { e.stopPropagation(); });
+  document.addEventListener('dragstart', function (e) {
+    if (e.target && e.target.tagName === 'VIDEO') e.preventDefault();
+  });
+  function applyDocZoom(d) {
+    docFontSize = Math.min(40, Math.max(13, docFontSize + d));
+    docModalBody.style.fontSize = docFontSize + 'px';
+  }
+  docZoomIn.addEventListener('click', function () { applyDocZoom(2); });
+  docZoomOut.addEventListener('click', function () { applyDocZoom(-2); });
+  docModalClose.addEventListener('click', closeDocModal);
+  docModal.addEventListener('click', function (e) {
+    if (e.target === docModal) closeDocModal();
+  });
+  window.addEventListener('resize', function () {
+    centerTree();
+    updateTimeline();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (videoModal.classList.contains('show')) closeVideoModal();
+      else if (docModal.classList.contains('show')) closeDocModal();
+      else if (lightbox.classList.contains('show')) closeLightbox();
+      else closeDetailPanel();
+    }
+  });
+
+  function urlExists(url) {
+    return fetch(url, { method: 'HEAD', cache: 'no-store' })
+      .then(function (res) { return res.ok; })
+      .catch(function () {
+        return fetch(url, { method: 'GET', cache: 'no-store' }).then(function (res) { return res.ok; }).catch(function () { return false; });
+      });
+  }
+
+  async function probePersonFiles(person) {
+    var name = safeStr(person.姓名);
+    var birth = safeStr(person.出生日期);
+    if (!name) return null;
+    var folder = birth + name;
+    var result = { images: [], docs: [], videos: [] };
+    var missCount = 0, i, num, hit;
+    for (i = 1; i <= MAX_INDEX; i++) {
+      num = String(i).padStart(2, '0');
+      hit = false;
+      var txtUrl = folder + '/' + name + num + '.txt';
+      if (await urlExists(encUrl(txtUrl))) {
+        result.docs.push({ url: txtUrl, file: name + num + '.txt' });
+        hit = true;
+      }
+      for (var a = 0; a < IMG_EXTS.length; a++) {
+        var imgUrl = folder + '/' + name + num + IMG_EXTS[a];
+        if (await urlExists(encUrl(imgUrl))) {
+          result.images.push({ url: imgUrl, file: name + num + IMG_EXTS[a] });
+          hit = true;
+          break;
+        }
+      }
+      for (var b = 0; b < VIDEO_EXTS.length; b++) {
+        var vUrl = folder + '/' + name + num + VIDEO_EXTS[b];
+        if (await urlExists(encUrl(vUrl))) {
+          result.videos.push({ url: vUrl, file: name + num + VIDEO_EXTS[b] });
+          hit = true;
+          break;
+        }
+      }
+      if (hit) { missCount = 0; } else { missCount++; if (missCount >= MISS_LIMIT) break; }
+    }
+    return result;
+  }
+
+  async function probeAll() {
+    var tasks = allPeople.map(function (p) {
+      return probePersonFiles(p).then(function (res) {
+        if (res) autoFileMap[p._id] = res;
+      });
+    });
+    await Promise.all(tasks);
+    renderTree(rootNodes);
+    if (selectedId) {
+      var region = document.getElementById('filesRegion');
+      var p = peopleMap[selectedId];
+      if (region && p) {
+        region.innerHTML = renderFilesSection(p);
+        bindDocLazyLoad();
+      }
+    }
+  }
+
+  // —— 启动加载进度条 ——
+  // 以“后台数据计算完成”为信号关闭；期间模拟进度动画，避免页面提前露出而出现报错
+  var bootTimer = null, bootPct = 0, bootStartTime = 0;
+  var BOOT_MIN_MS = 900;   // 最短展示时长，避免闪屏
+  var maintainInfoCache = null;   // 维护信息.txt 预读取缓存，init 阶段加载完毕
+  function bootStart() {
+    bootStartTime = Date.now();
+    bootPct = 0;
+    var fill = document.getElementById('bootFill');
+    var pct = document.getElementById('bootPct');
+    if (fill) fill.style.width = '0%';
+    if (pct) pct.textContent = '0%';
+    bootTimer = setInterval(function () {
+      bootPct = Math.min(90, bootPct + 1.5 + Math.random() * 3.5);
+      if (fill) fill.style.width = bootPct + '%';
+      if (pct) pct.textContent = Math.round(bootPct) + '%';
+    }, 170);
+  }
+  function bootFinish(msg) {
+    if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
+    var fill = document.getElementById('bootFill');
+    var pct = document.getElementById('bootPct');
+    var tx = document.getElementById('bootText');
+    if (fill) fill.style.width = '100%';
+    if (pct) pct.textContent = '100%';
+    if (tx && msg) tx.textContent = msg;
+    var wait = Math.max(0, BOOT_MIN_MS - (Date.now() - bootStartTime));
+    setTimeout(function () {
+      var el = document.getElementById('bootLoading');
+      if (el) {
+        el.classList.add('hide');
+        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 500);
+      }
+    }, wait + 280);
+  }
+
+  async function init() {
+    bootStart();
+    try {
+      // 预读取维护信息，进度条阶段内完成；按钮点击时直接展示缓存，不再等待网络
+      try {
+        var miRes = await fetch('维护信息.txt', { cache: 'no-store' });
+        if (miRes.ok) maintainInfoCache = decodeText(await miRes.arrayBuffer());
+      } catch (e) { maintainInfoCache = null; }
+      var res = await fetch('zupu.txt', { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var text = await res.text();
+      var parsed = parseZupu(text);
+      fields = parsed.fields;
+      allPeople = mergePeople(parsed.people);
+      if (allPeople.length === 0) {
+        bootFinish('未找到记录');
+        emptyState.innerHTML = '<div class="icon">📜</div><div>未在 zupu.txt 中找到族谱记录</div>';
+        emptyState.style.display = 'flex';
+        personCount.textContent = '0 人';
+        personCount.classList.remove('loading');
+        return;
+      }
+      rootNodes = buildTree(allPeople);
+      peopleMap = {};
+      for (var pm = 0; pm < allPeople.length; pm++) peopleMap[allPeople[pm]._id] = allPeople[pm];
+      layoutTree(rootNodes);
+      renderTree(rootNodes);
+      // 探测个人文件夹（头像/照片/文档/视频），确保所有文件读取都在进度条阶段结束
+      await probeAll();
+      centerTree();
+      bootFinish('加载完成');
+      personCount.textContent = allPeople.length + ' 人';
+      personCount.classList.remove('loading');
+      emptyState.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      bootFinish('加载失败');
+      emptyState.style.display = 'flex';
+      emptyState.innerHTML = '<div class="icon">⚠️</div><div>无法读取 zupu.txt</div>'
+        + '<div class="error">请通过本地 HTTP 服务器访问（如 <strong>start.bat</strong> 或 <strong>python -m http.server 8000</strong>），file:// 直接打开会被浏览器安全策略拦截。</div>';
+      personCount.textContent = '加载失败';
+      personCount.classList.remove('loading');
+      showToast('无法读取 zupu.txt，请使用本地服务器访问', 4200);
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

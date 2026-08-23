@@ -654,7 +654,8 @@ body {
 
   var NODE_W = 150, NODE_H = 96, AVATAR_R = 24;
   var H_SPACING = 30, V_SPACING = 60, MARRIAGE_GAP = 18, TOP_OFFSET = 40;
-  var IMG_EXTS = ['.webp', '.jpg', '.jpeg', '.png', '.gif', '.bmp'];
+  // 同时覆盖大写扩展名（如 .JPG/.PNG），避免个人文件夹内大写命名的图片探测不到
+  var IMG_EXTS = ['.webp', '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.JPG', '.JPEG', '.PNG', '.GIF', '.BMP', '.WEBP'];
   var VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.ogg'];
   var MAX_INDEX = 99, MISS_LIMIT = 2;
 
@@ -1774,11 +1775,12 @@ body {
     var pct = document.getElementById('bootPct');
     if (fill) fill.style.width = '0%';
     if (pct) pct.textContent = '0%';
+    // 固定速度：1 秒走 1%，平滑推进避免在 90% 处卡住；后台加载完成时由 bootFinish 直接跳到 100%
     bootTimer = setInterval(function () {
-      bootPct = Math.min(90, bootPct + 1.5 + Math.random() * 3.5);
+      bootPct = Math.min(90, bootPct + 1);
       if (fill) fill.style.width = bootPct + '%';
       if (pct) pct.textContent = Math.round(bootPct) + '%';
-    }, 170);
+    }, 1000);
   }
   function bootFinish(msg) {
     if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
